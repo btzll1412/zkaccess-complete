@@ -1,1 +1,35 @@
-
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Add ZKAccess Panel",
+        "description": "Configure your ZKTeco C3 Access Control Panel",
+        "data": {
+          "panel_name": "Panel Name",
+          "ip_address": "IP Address",
+          "port": "Port",
+          "password": "Password (optional)"
+        }
+      }
+    },
+    "error": {
+      "cannot_connect": "Cannot connect to panel. Check IP address and network.",
+      "unknown": "Unknown error occurred"
+    },
+    "abort": {
+      "already_configured": "This panel is already configured"
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Panel Options",
+        "data": {
+          "scan_interval": "Scan Interval (seconds)",
+          "unlock_duration": "Default Unlock Duration (seconds)",
+          "enable_notifications": "Enable Notifications"
+        }
+      }
+    }
+  }
+}

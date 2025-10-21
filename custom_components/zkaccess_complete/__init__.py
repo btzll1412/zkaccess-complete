@@ -2,11 +2,13 @@
 from __future__ import annotations
 
 import logging
+import os
 
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import Platform
 from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import ConfigEntryNotReady
+from homeassistant.components import frontend
 
 from .const import DOMAIN
 from .coordinator import ZKAccessCoordinator
@@ -21,6 +23,10 @@ PLATFORMS = [
 async def async_setup(hass: HomeAssistant, config: dict) -> bool:
     """Set up the ZKAccess integration."""
     hass.data.setdefault(DOMAIN, {})
+    
+    # Register the frontend panel
+    await async_register_panel(hass)
+    
     return True
 
 
@@ -61,3 +67,31 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         await coordinator.async_disconnect()
     
     return unload_ok
+
+
+async def async_register_panel(hass: HomeAssistant) -> None:
+    """Register the frontend panel."""
+    
+    # Get the path to our HTML file
+    panel_path = os.path.join(os.path.dirname(__file__), "frontend", "zkaccess-panel.html")
+    
+    # Register the panel URL
+    hass.http.register_static_path(
+        "/zkaccess-panel",
+        panel_path,
+        cache_headers=False,
+    )
+    
+    # Register the panel in sidebar
+    hass.components.frontend.async_register_built_in_panel(
+        component_name="iframe",
+        sidebar_title="Access Control",
+        sidebar_icon="mdi:shield-lock",
+        frontend_url_path="zkaccess",
+        config={
+            "url": "/zkaccess-panel"
+        },
+        require_admin=False,
+    )
+    
+    _LOGGER.info("ZKAccess frontend panel registered")

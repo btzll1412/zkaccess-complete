@@ -1,0 +1,7 @@
+{
+  "name": "ZKAccess Complete Control System",
+  "render_readme": true,
+  "domains": ["lock", "binary_sensor", "sensor", "switch"],
+  "iot_class": "Local Polling",
+  "homeassistant": "2024.1.0"
+}

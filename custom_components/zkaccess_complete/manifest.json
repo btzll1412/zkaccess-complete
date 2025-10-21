@@ -1,1 +1,11 @@
-
+{
+  "domain": "zkaccess_complete",
+  "name": "ZKAccess Complete Control System",
+  "codeowners": ["@btzll1412"],
+  "config_flow": true,
+  "documentation": "https://github.com/btzll1412/zkaccess-complete",
+  "requirements": [],
+  "version": "1.0.0",
+  "iot_class": "local_polling",
+  "issue_tracker": "https://github.com/btzll1412/zkaccess-complete/issues"
+}

@@ -32,31 +32,25 @@ class C3Client:
         self.connected = False
 
     def connect(self) -> bool:
-        """Connect to the panel."""
-        try:
-            self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-            self.socket.settimeout(10)
-            self.socket.connect((self.ip, self.port))
-            
-            response = self._send_command(CMD_CONNECT, b'')
-            
-            if response is not None:
-                self.connected = True
-                _LOGGER.info("Connected to C3 panel at %s:%s", self.ip, self.port)
-                return True
-            else:
-                _LOGGER.error("No response from panel at %s:%s", self.ip, self.port)
-                return False
-            
-        except socket.timeout:
-            _LOGGER.error("Connection timeout to %s:%s", self.ip, self.port)
-            return False
-        except ConnectionRefusedError:
-            _LOGGER.error("Connection refused by %s:%s", self.ip, self.port)
-            return False
-        except Exception as e:
-            _LOGGER.error("Connection error to %s:%s - %s", self.ip, self.port, e)
-            return False
+    """Connect to the panel."""
+    try:
+        self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        self.socket.settimeout(5)
+        self.socket.connect((self.ip, self.port))
+        
+        self.connected = True
+        _LOGGER.info("Connected to C3 panel at %s:%s", self.ip, self.port)
+        return True
+        
+    except socket.timeout:
+        _LOGGER.error("Connection timeout to %s:%s", self.ip, self.port)
+        return False
+    except ConnectionRefusedError:
+        _LOGGER.error("Connection refused by %s:%s", self.ip, self.port)
+        return False
+    except Exception as e:
+        _LOGGER.error("Connection error to %s:%s - %s", self.ip, self.port, e)
+        return False
 
     def disconnect(self) -> None:
         """Disconnect from the panel."""

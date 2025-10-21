@@ -8,6 +8,7 @@ from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import Platform
 from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import ConfigEntryNotReady
+from homeassistant.components.http.static import StaticPathConfig
 
 from .const import DOMAIN
 from .coordinator import ZKAccessCoordinator
@@ -76,20 +77,22 @@ async def async_register_panel(hass: HomeAssistant) -> None:
         integration_dir = Path(__file__).parent
         panel_file = integration_dir / "frontend" / "zkaccess-panel.html"
         
-        # Register static path
-        hass.http.register_static_path(
-            "/api/zkaccess/panel",
-            str(panel_file),
-            cache_headers=False,
-        )
+        # Modern async method - register static path
+        await hass.http.async_register_static_paths([
+            StaticPathConfig(
+                "/zkaccess-panel",
+                str(panel_file),
+                cache_headers=False
+            )
+        ])
         
-        # Register panel
+        # Register panel in sidebar
         hass.components.frontend.async_register_built_in_panel(
             component_name="iframe",
             sidebar_title="Access Control",
             sidebar_icon="mdi:shield-lock",
             frontend_url_path="zkaccess",
-            config={"url": "/api/zkaccess/panel"},
+            config={"url": "/zkaccess-panel"},
             require_admin=False,
         )
         

@@ -1,1 +1,163 @@
+# Service definitions for ZKAccess Complete Control System
 
+add_user:
+  name: Add User
+  description: Add a new user to the access control system
+  fields:
+    user_name:
+      name: User Name
+      description: Full name of the user
+      required: true
+      selector:
+        text:
+    card_number:
+      name: Card Number
+      description: RFID card number
+      required: false
+      selector:
+        text:
+    pin_code:
+      name: PIN Code
+      description: PIN code for access
+      required: false
+      selector:
+        text:
+    verify_mode:
+      name: Verification Mode
+      description: How the user will authenticate
+      required: true
+      default: "card_only"
+      selector:
+        select:
+          options:
+            - label: "Card Only"
+              value: "card_only"
+            - label: "PIN Only"
+              value: "pin_only"
+            - label: "Card OR PIN"
+              value: "card_or_pin"
+            - label: "Card AND PIN"
+              value: "card_and_pin"
+    groups:
+      name: Access Groups
+      description: Groups this user belongs to
+      required: false
+      selector:
+        select:
+          options: []
+          multiple: true
+    start_date:
+      name: Start Date
+      description: When access begins
+      required: false
+      selector:
+        date:
+    end_date:
+      name: End Date
+      description: When access expires
+      required: false
+      selector:
+        date:
+
+update_user:
+  name: Update User
+  description: Update an existing user
+  fields:
+    user_id:
+      name: User ID
+      description: ID of the user to update
+      required: true
+      selector:
+        number:
+          min: 1
+    user_name:
+      name: User Name
+      description: Full name of the user
+      required: false
+      selector:
+        text:
+    card_number:
+      name: Card Number
+      description: RFID card number
+      required: false
+      selector:
+        text:
+    pin_code:
+      name: PIN Code
+      description: PIN code for access
+      required: false
+      selector:
+        text:
+    verify_mode:
+      name: Verification Mode
+      description: How the user will authenticate
+      required: false
+      selector:
+        select:
+          options:
+            - label: "Card Only"
+              value: "card_only"
+            - label: "PIN Only"
+              value: "pin_only"
+            - label: "Card OR PIN"
+              value: "card_or_pin"
+            - label: "Card AND PIN"
+              value: "card_and_pin"
+    groups:
+      name: Access Groups
+      description: Groups this user belongs to
+      required: false
+      selector:
+        select:
+          options: []
+          multiple: true
+
+delete_user:
+  name: Delete User
+  description: Delete a user from the system
+  fields:
+    user_id:
+      name: User ID
+      description: ID of the user to delete
+      required: true
+      selector:
+        number:
+          min: 1
+
+lock_all_doors:
+  name: Lock All Doors
+  description: Lock all doors on all panels
+  fields:
+    except_doors:
+      name: Except Doors
+      description: Door numbers to exclude from locking
+      required: false
+      selector:
+        number:
+          multiple: true
+          min: 1
+          max: 40
+
+unlock_all_doors:
+  name: Unlock All Doors
+  description: Unlock all or specific doors
+  fields:
+    only_doors:
+      name: Only Doors
+      description: Specific door numbers to unlock (empty = all)
+      required: false
+      selector:
+        number:
+          multiple: true
+          min: 1
+          max: 40
+    duration:
+      name: Duration
+      description: Seconds to keep unlocked
+      required: false
+      default: 5
+      selector:
+        number:
+          min: 1
+          max: 255
+          unit_of_measurement: seconds

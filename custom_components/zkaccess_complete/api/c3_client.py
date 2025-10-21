@@ -7,7 +7,6 @@ from typing import Any
 
 _LOGGER = logging.getLogger(__name__)
 
-# Protocol commands
 CMD_CONNECT = 0x0001
 CMD_DISCONNECT = 0x0002
 CMD_GET_PARAM = 0x0004
@@ -16,7 +15,6 @@ CMD_GET_RTLOG = 0x000B
 CMD_ACK_OK = 0x07D0
 CMD_ACK_ERROR = 0x07D1
 
-# Control sub-commands
 CONTROL_OUTPUT = 1
 
 
@@ -40,25 +38,24 @@ class C3Client:
             self.socket.settimeout(10)
             self.socket.connect((self.ip, self.port))
             
-            # Send connect command
             response = self._send_command(CMD_CONNECT, b'')
             
             if response is not None:
                 self.connected = True
-                _LOGGER.info("✅ Connected to C3 panel at %s:%s", self.ip, self.port)
+                _LOGGER.info("Connected to C3 panel at %s:%s", self.ip, self.port)
                 return True
             else:
-                _LOGGER.error("❌ No response from panel at %s:%s", self.ip, self.port)
+                _LOGGER.error("No response from panel at %s:%s", self.ip, self.port)
                 return False
             
         except socket.timeout:
-            _LOGGER.error("❌ Connection timeout to %s:%s", self.ip, self.port)
+            _LOGGER.error("Connection timeout to %s:%s", self.ip, self.port)
             return False
         except ConnectionRefusedError:
-            _LOGGER.error("❌ Connection refused by %s:%s - check if panel is on", self.ip, self.port)
+            _LOGGER.error("Connection refused by %s:%s", self.ip, self.port)
             return False
         except Exception as e:
-            _LOGGER.error("❌ Connection error to %s:%s - %s", self.ip, self.port, e)
+            _LOGGER.error("Connection error to %s:%s - %s", self.ip, self.port, e)
             return False
 
     def disconnect(self) -> None:
@@ -82,7 +79,6 @@ class C3Client:
             }
         
         try:
-            # Try to get parameters
             params = ["~SerialNumber", "LockCount", "FirmVer"]
             info = self.get_parameters(params)
             
@@ -106,7 +102,6 @@ class C3Client:
             return {}
         
         try:
-            # Build parameter request
             param_str = ",".join(params) + ","
             data = param_str.encode('utf-8')
             
@@ -115,7 +110,6 @@ class C3Client:
             if not response:
                 return {}
             
-            # Parse response
             result = {}
             response_str = response.decode('utf-8', errors='ignore')
             
@@ -133,8 +127,6 @@ class C3Client:
         """Get status of all doors."""
         doors = []
         
-        # For now, return basic structure
-        # TODO: Implement actual door status reading
         for door_num in range(1, 5):
             doors.append({
                 "door": door_num,
@@ -157,7 +149,6 @@ class C3Client:
                 return []
             
             events = []
-            # TODO: Parse actual event data from response
             
             return events
         except Exception as e:
@@ -171,23 +162,21 @@ class C3Client:
             return False
         
         try:
-            _LOGGER.info("🔓 Unlocking door %s for %s seconds", door_number, duration)
+            _LOGGER.info("Unlocking door %s for %s seconds", door_number, duration)
             
-            # Build control output command
-            # Format: output_number (1 byte) + address (1 byte) + duration (1 byte) + 0 (1 byte)
             data = struct.pack('BBBB', door_number, 1, duration, 0)
             
             response = self._send_command(CMD_CONTROL, data)
             
             if response is not None:
-                _LOGGER.info("✅ Door %s unlock command sent successfully", door_number)
+                _LOGGER.info("Door %s unlock command sent successfully", door_number)
                 return True
             else:
-                _LOGGER.error("❌ Door %s unlock failed - no response", door_number)
+                _LOGGER.error("Door %s unlock failed - no response", door_number)
                 return False
                 
         except Exception as e:
-            _LOGGER.error("❌ Failed to unlock door %s: %s", door_number, e)
+            _LOGGER.error("Failed to unlock door %s: %s", door_number, e)
             return False
 
     def lock_door(self, door_number: int) -> bool:
@@ -197,22 +186,21 @@ class C3Client:
             return False
         
         try:
-            _LOGGER.info("🔒 Locking door %s", door_number)
+            _LOGGER.info("Locking door %s", door_number)
             
-            # Duration 0 = lock immediately
             data = struct.pack('BBBB', door_number, 1, 0, 0)
             
             response = self._send_command(CMD_CONTROL, data)
             
             if response is not None:
-                _LOGGER.info("✅ Door %s lock command sent successfully", door_number)
+                _LOGGER.info("Door %s lock command sent successfully", door_number)
                 return True
             else:
-                _LOGGER.error("❌ Door %s lock failed - no response", door_number)
+                _LOGGER.error("Door %s lock failed - no response", door_number)
                 return False
                 
         except Exception as e:
-            _LOGGER.error("❌ Failed to lock door %s: %s", door_number, e)
+            _LOGGER.error("Failed to lock door %s: %s", door_number, e)
             return False
 
     def _send_command(self, command: int, data: bytes = b'') -> bytes | None:
@@ -221,80 +209,65 @@ class C3Client:
             return None
         
         try:
-            # Build packet
             packet = self._build_packet(command, data)
             
-            _LOGGER.debug("📤 Sending command 0x%04X to %s", command, self.ip)
+            _LOGGER.debug("Sending command 0x%04X to %s", command, self.ip)
             
-            # Send
             self.socket.sendall(packet)
             
-            # Receive response
             response = self.socket.recv(4096)
             
             if len(response) < 8:
                 _LOGGER.warning("Response too short: %s bytes", len(response))
                 return None
             
-            # Verify response format
             if response[0] != 0xAA or response[-1] != 0x55:
                 _LOGGER.warning("Invalid response format")
                 return None
             
-            # Extract command
             response_cmd = struct.unpack('<H', response[2:4])[0]
             
-            _LOGGER.debug("📥 Received response: 0x%04X", response_cmd)
+            _LOGGER.debug("Received response: 0x%04X", response_cmd)
             
-            # Check if ACK
             if response_cmd == CMD_ACK_OK:
-                _LOGGER.debug("✅ Command acknowledged")
-                # Extract data if present
+                _LOGGER.debug("Command acknowledged")
                 data_length = struct.unpack('<H', response[4:6])[0]
                 if data_length > 0:
                     return response[8:8+data_length]
                 return b''
             elif response_cmd == CMD_ACK_ERROR:
-                _LOGGER.warning("⚠️ Command error response")
+                _LOGGER.warning("Command error response")
                 return None
             else:
-                # Response with data
                 data_length = struct.unpack('<H', response[4:6])[0]
                 if data_length > 0:
                     return response[8:8+data_length]
                 return b''
             
         except socket.timeout:
-            _LOGGER.warning("⏱️ Command timeout")
+            _LOGGER.warning("Command timeout")
             return None
         except Exception as e:
-            _LOGGER.error("❌ Command error: %s", e)
+            _LOGGER.error("Command error: %s", e)
             return None
 
     def _build_packet(self, command: int, data: bytes = b'') -> bytes:
         """Build protocol packet."""
-        # C3 protocol packet format:
-        # Start (0xAA) + Version (0x00) + Command (2 bytes) + DataLength (2 bytes) + Reserved (2 bytes) + Data + Checksum (2 bytes) + End (0x55)
-        
         data_length = len(data)
         
-        # Build header
         packet = bytearray()
-        packet.append(0xAA)  # Start
-        packet.append(0x00)  # Version
-        packet.extend(struct.pack('<H', command))  # Command (little-endian)
-        packet.extend(struct.pack('<H', data_length))  # Data length
-        packet.extend(struct.pack('<H', 0))  # Reserved
+        packet.append(0xAA)
+        packet.append(0x00)
+        packet.extend(struct.pack('<H', command))
+        packet.extend(struct.pack('<H', data_length))
+        packet.extend(struct.pack('<H', 0))
         
-        # Add data
         if data:
             packet.extend(data)
         
-        # Calculate checksum (sum of all bytes except start and end)
         checksum = sum(packet[1:]) & 0xFFFF
         packet.extend(struct.pack('<H', checksum))
         
-        # End marker
         packet.append(0x55)
         
         return bytes(packet)

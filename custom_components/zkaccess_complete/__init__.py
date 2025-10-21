@@ -2,13 +2,12 @@
 from __future__ import annotations
 
 import logging
-import os
+from pathlib import Path
 
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import Platform
 from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import ConfigEntryNotReady
-from homeassistant.components import frontend
 
 from .const import DOMAIN
 from .coordinator import ZKAccessCoordinator
@@ -72,26 +71,29 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 async def async_register_panel(hass: HomeAssistant) -> None:
     """Register the frontend panel."""
     
-    # Get the path to our HTML file
-    panel_path = os.path.join(os.path.dirname(__file__), "frontend", "zkaccess-panel.html")
-    
-    # Register the panel URL
-    hass.http.register_static_path(
-        "/zkaccess-panel",
-        panel_path,
-        cache_headers=False,
-    )
-    
-    # Register the panel in sidebar
-    hass.components.frontend.async_register_built_in_panel(
-        component_name="iframe",
-        sidebar_title="Access Control",
-        sidebar_icon="mdi:shield-lock",
-        frontend_url_path="zkaccess",
-        config={
-            "url": "/zkaccess-panel"
-        },
-        require_admin=False,
-    )
-    
-    _LOGGER.info("ZKAccess frontend panel registered")
+    try:
+        # Get path to integration directory
+        integration_dir = Path(__file__).parent
+        panel_file = integration_dir / "frontend" / "zkaccess-panel.html"
+        
+        # Register static path
+        hass.http.register_static_path(
+            "/api/zkaccess/panel",
+            str(panel_file),
+            cache_headers=False,
+        )
+        
+        # Register panel
+        hass.components.frontend.async_register_built_in_panel(
+            component_name="iframe",
+            sidebar_title="Access Control",
+            sidebar_icon="mdi:shield-lock",
+            frontend_url_path="zkaccess",
+            config={"url": "/api/zkaccess/panel"},
+            require_admin=False,
+        )
+        
+        _LOGGER.info("✅ ZKAccess panel registered successfully")
+        
+    except Exception as err:
+        _LOGGER.error("❌ Failed to register panel: %s", err)

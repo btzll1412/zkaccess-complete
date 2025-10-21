@@ -1,1 +1,863 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ZKAccess Control System</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
 
+        body {
+            font-family: 'Roboto', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: #f5f5f5;
+            color: #333;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        /* Navigation */
+        .navbar {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 0 20px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            position: sticky;
+            top: 0;
+            z-index: 1000;
+        }
+
+        .nav-content {
+            max-width: 1400px;
+            margin: 0 auto;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            height: 60px;
+        }
+
+        .nav-brand {
+            font-size: 20px;
+            font-weight: bold;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .nav-tabs {
+            display: flex;
+            gap: 5px;
+        }
+
+        .nav-tab {
+            padding: 10px 20px;
+            cursor: pointer;
+            border-radius: 8px;
+            transition: all 0.3s;
+            font-weight: 500;
+        }
+
+        .nav-tab:hover {
+            background: rgba(255,255,255,0.1);
+        }
+
+        .nav-tab.active {
+            background: rgba(255,255,255,0.2);
+        }
+
+        /* Cards */
+        .card {
+            background: white;
+            border-radius: 12px;
+            padding: 24px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+            margin-bottom: 20px;
+        }
+
+        .card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .card-title {
+            font-size: 20px;
+            font-weight: 600;
+            color: #333;
+        }
+
+        /* Stats Grid */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .stat-card {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 24px;
+            border-radius: 12px;
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+        }
+
+        .stat-value {
+            font-size: 36px;
+            font-weight: bold;
+            margin: 10px 0;
+        }
+
+        .stat-label {
+            font-size: 14px;
+            opacity: 0.9;
+        }
+
+        /* Table */
+        .table-container {
+            overflow-x: auto;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        thead {
+            background: #f8f9fa;
+        }
+
+        th {
+            text-align: left;
+            padding: 12px;
+            font-weight: 600;
+            color: #666;
+            font-size: 13px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        td {
+            padding: 12px;
+            border-top: 1px solid #e9ecef;
+        }
+
+        tbody tr:hover {
+            background: #f8f9fa;
+        }
+
+        /* Buttons */
+        .btn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-size: 14px;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+        }
+
+        .btn-success {
+            background: #10b981;
+            color: white;
+        }
+
+        .btn-danger {
+            background: #ef4444;
+            color: white;
+        }
+
+        .btn-sm {
+            padding: 6px 12px;
+            font-size: 12px;
+        }
+
+        /* Status Badges */
+        .badge {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+
+        .badge-success {
+            background: #d1fae5;
+            color: #065f46;
+        }
+
+        .badge-danger {
+            background: #fee2e2;
+            color: #991b1b;
+        }
+
+        .badge-warning {
+            background: #fef3c7;
+            color: #92400e;
+        }
+
+        /* Event Log */
+        .event-log {
+            max-height: 400px;
+            overflow-y: auto;
+        }
+
+        .event-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 12px;
+            border-bottom: 1px solid #e9ecef;
+        }
+
+        .event-item:last-child {
+            border-bottom: none;
+        }
+
+        .event-icon {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 18px;
+        }
+
+        .event-icon.success {
+            background: #d1fae5;
+            color: #065f46;
+        }
+
+        .event-icon.danger {
+            background: #fee2e2;
+            color: #991b1b;
+        }
+
+        .event-icon.warning {
+            background: #fef3c7;
+            color: #92400e;
+        }
+
+        .event-content {
+            flex: 1;
+        }
+
+        .event-title {
+            font-weight: 600;
+            margin-bottom: 4px;
+        }
+
+        .event-details {
+            font-size: 13px;
+            color: #666;
+        }
+
+        .event-time {
+            font-size: 12px;
+            color: #999;
+        }
+
+        /* Door Grid */
+        .door-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 20px;
+        }
+
+        .door-card {
+            background: white;
+            border-radius: 12px;
+            padding: 20px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+            border: 2px solid #e9ecef;
+            transition: all 0.3s;
+        }
+
+        .door-card:hover {
+            border-color: #667eea;
+            transform: translateY(-2px);
+        }
+
+        .door-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 16px;
+        }
+
+        .door-name {
+            font-size: 18px;
+            font-weight: 600;
+        }
+
+        .door-status {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 16px;
+        }
+
+        .status-indicator {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            animation: pulse 2s infinite;
+        }
+
+        .status-indicator.locked {
+            background: #10b981;
+        }
+
+        .status-indicator.unlocked {
+            background: #f59e0b;
+        }
+
+        @keyframes pulse {
+            0%, 100% {
+                opacity: 1;
+            }
+            50% {
+                opacity: 0.5;
+            }
+        }
+
+        /* Search & Filter */
+        .search-bar {
+            display: flex;
+            gap: 12px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+
+        .search-input {
+            flex: 1;
+            min-width: 200px;
+            padding: 10px 16px;
+            border: 1px solid #e9ecef;
+            border-radius: 8px;
+            font-size: 14px;
+        }
+
+        .search-input:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        select {
+            padding: 10px 16px;
+            border: 1px solid #e9ecef;
+            border-radius: 8px;
+            font-size: 14px;
+            cursor: pointer;
+        }
+
+        /* Modal */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.5);
+            z-index: 2000;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal.active {
+            display: flex;
+        }
+
+        .modal-content {
+            background: white;
+            border-radius: 16px;
+            padding: 32px;
+            max-width: 600px;
+            width: 90%;
+            max-height: 90vh;
+            overflow-y: auto;
+            animation: slideUp 0.3s;
+        }
+
+        @keyframes slideUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 24px;
+        }
+
+        .modal-title {
+            font-size: 24px;
+            font-weight: 600;
+        }
+
+        .close-btn {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            border: none;
+            background: #f3f4f6;
+            cursor: pointer;
+            font-size: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .close-btn:hover {
+            background: #e5e7eb;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            font-size: 14px;
+            color: #374151;
+        }
+
+        .form-input {
+            width: 100%;
+            padding: 10px 16px;
+            border: 1px solid #e9ecef;
+            border-radius: 8px;
+            font-size: 14px;
+        }
+
+        .form-input:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        /* Hidden tabs */
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+            animation: fadeIn 0.3s;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+            }
+            to {
+                opacity: 1;
+            }
+        }
+
+        /* Loading */
+        .loading {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid rgba(255,255,255,0.3);
+            border-radius: 50%;
+            border-top-color: white;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            to {
+                transform: rotate(360deg);
+            }
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .nav-tabs {
+                display: none;
+            }
+
+            .stats-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .door-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Navigation -->
+    <nav class="navbar">
+        <div class="nav-content">
+            <div class="nav-brand">
+                🔐 ZKAccess Control System
+            </div>
+            <div class="nav-tabs">
+                <div class="nav-tab active" onclick="showTab('dashboard')">📊 Dashboard</div>
+                <div class="nav-tab" onclick="showTab('users')">👥 Users</div>
+                <div class="nav-tab" onclick="showTab('events')">📋 Live Events</div>
+                <div class="nav-tab" onclick="showTab('access')">🔐 Access Groups</div>
+                <div class="nav-tab" onclick="showTab('schedules')">📅 Schedules</div>
+                <div class="nav-tab" onclick="showTab('reports')">📈 Reports</div>
+                <div class="nav-tab" onclick="showTab('system')">⚙️ System</div>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container">
+        <!-- Dashboard Tab -->
+        <div id="dashboard" class="tab-content active">
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <div class="stat-label">👥 Active Users</div>
+                    <div class="stat-value" id="stat-users">200</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">🚪 Doors Online</div>
+                    <div class="stat-value" id="stat-doors">8/8</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">📝 Events Today</div>
+                    <div class="stat-value" id="stat-events">1,234</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">⚠️ Active Alarms</div>
+                    <div class="stat-value" id="stat-alarms">0</div>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-header">
+                    <div class="card-title">Recent Activity</div>
+                    <button class="btn btn-primary btn-sm" onclick="showTab('events')">View All →</button>
+                </div>
+                <div class="event-log" id="recent-events">
+                    <!-- Events will be populated here -->
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-header">
+                    <div class="card-title">Door Status</div>
+                </div>
+                <div class="door-grid" id="door-status">
+                    <!-- Doors will be populated here -->
+                </div>
+            </div>
+        </div>
+
+        <!-- Users Tab -->
+        <div id="users" class="tab-content">
+            <div class="card">
+                <div class="card-header">
+                    <div class="card-title">Users (200)</div>
+                    <div style="display: flex; gap: 10px;">
+                        <button class="btn btn-primary" onclick="showAddUserModal()">+ Add User</button>
+                        <button class="btn btn-primary">Import CSV</button>
+                    </div>
+                </div>
+
+                <div class="search-bar">
+                    <input type="text" class="search-input" placeholder="🔍 Search users..." id="user-search">
+                    <select>
+                        <option>All Users</option>
+                        <option>Active</option>
+                        <option>Inactive</option>
+                        <option>Expired</option>
+                    </select>
+                    <select>
+                        <option>All Groups</option>
+                        <option>Employees</option>
+                        <option>Managers</option>
+                        <option>Contractors</option>
+                    </select>
+                </div>
+
+                <div class="table-container">
+                    <table id="users-table">
+                        <thead>
+                            <tr>
+                                <th>Name</th>
+                                <th>Card Number</th>
+                                <th>PIN</th>
+                                <th>Verify Mode</th>
+                                <th>Status</th>
+                                <th>Groups</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="users-tbody">
+                            <!-- Users will be populated here -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Live Events Tab -->
+        <div id="events" class="tab-content">
+            <div class="card">
+                <div class="card-header">
+                    <div class="card-title">Live Events</div>
+                    <div style="display: flex; gap: 10px; align-items: center;">
+                        <span style="color: #10b981; font-weight: 600;">● Auto-refresh ON</span>
+                        <button class="btn btn-primary btn-sm">Export</button>
+                    </div>
+                </div>
+
+                <div class="search-bar">
+                    <select>
+                        <option>All Events</option>
+                        <option>Access Granted</option>
+                        <option>Access Denied</option>
+                        <option>Alarms</option>
+                    </select>
+                    <select>
+                        <option>All Doors</option>
+                        <option>Door 1</option>
+                        <option>Door 2</option>
+                        <option>Door 3</option>
+                        <option>Door 4</option>
+                    </select>
+                    <select>
+                        <option>All Users</option>
+                    </select>
+                </div>
+
+                <div class="table-container">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Time</th>
+                                <th>Event</th>
+                                <th>User</th>
+                                <th>Door</th>
+                                <th>Details</th>
+                            </tr>
+                        </thead>
+                        <tbody id="events-tbody">
+                            <!-- Events will be populated here -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Access Groups Tab -->
+        <div id="access" class="tab-content">
+            <div class="card">
+                <div class="card-header">
+                    <div class="card-title">Access Groups</div>
+                    <button class="btn btn-primary">+ New Group</button>
+                </div>
+
+                <div id="access-groups">
+                    <!-- Access groups will be populated here -->
+                </div>
+            </div>
+        </div>
+
+        <!-- Schedules Tab -->
+        <div id="schedules" class="tab-content">
+            <div class="card">
+                <div class="card-header">
+                    <div class="card-title">Time Zones & Schedules</div>
+                    <button class="btn btn-primary">+ New Schedule</button>
+                </div>
+                <p>Schedule management coming soon...</p>
+            </div>
+        </div>
+
+        <!-- Reports Tab -->
+        <div id="reports" class="tab-content">
+            <div class="card">
+                <div class="card-header">
+                    <div class="card-title">Reports & Analytics</div>
+                </div>
+                <p>Reports and analytics coming soon...</p>
+            </div>
+        </div>
+
+        <!-- System Tab -->
+        <div id="system" class="tab-content">
+            <div class="card">
+                <div class="card-header">
+                    <div class="card-title">System Settings</div>
+                </div>
+                <p>System settings coming soon...</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Add User Modal -->
+    <div id="addUserModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <div class="modal-title">Add New User</div>
+                <button class="close-btn" onclick="closeModal('addUserModal')">×</button>
+            </div>
+
+            <form id="addUserForm">
+                <div class="form-group">
+                    <label class="form-label">Full Name *</label>
+                    <input type="text" class="form-input" placeholder="John Doe" required>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Employee ID</label>
+                    <input type="text" class="form-input" placeholder="EMP001">
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Verification Mode *</label>
+                    <select class="form-input">
+                        <option value="card_only">Card Only</option>
+                        <option value="pin_only">PIN Only</option>
+                        <option value="card_or_pin">Card OR PIN</option>
+                        <option value="card_and_pin">Card AND PIN</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Card Number</label>
+                    <div style="display: flex; gap: 10px;">
+                        <input type="text" class="form-input" placeholder="123456789">
+                        <button type="button" class="btn btn-primary">Generate</button>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">PIN Code</label>
+                    <div style="display: flex; gap: 10px;">
+                        <input type="password" class="form-input" placeholder="****">
+                        <button type="button" class="btn btn-primary">Generate</button>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Access Groups</label>
+                    <select class="form-input" multiple size="4">
+                        <option>Employees</option>
+                        <option>Managers</option>
+                        <option>Contractors</option>
+                        <option>Admins</option>
+                    </select>
+                </div>
+
+                <div style="display: flex; gap: 10px; justify-content: flex-end; margin-top: 24px;">
+                    <button type="button" class="btn" onclick="closeModal('addUserModal')">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Add User</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        // Tab switching
+        function showTab(tabName) {
+            document.querySelectorAll('.tab-content').forEach(tab => {
+                tab.classList.remove('active');
+            });
+            document.querySelectorAll('.nav-tab').forEach(tab => {
+                tab.classList.remove('active');
+            });
+            
+            document.getElementById(tabName).classList.add('active');
+            event.target.classList.add('active');
+        }
+
+        // Modal functions
+        function showAddUserModal() {
+            document.getElementById('addUserModal').classList.add('active');
+        }
+
+        function closeModal(modalId) {
+            document.getElementById(modalId).classList.remove('active');
+        }
+
+        // Sample data rendering
+        function renderRecentEvents() {
+            const eventsContainer = document.getElementById('recent-events');
+            const sampleEvents = [
+                {time: '14:32:15', type: 'success', event: 'Access Granted', user: 'John Doe', door: 'Door 1 - Main Entrance', detail: 'Card'},
+                {time: '14:28:42', type: 'success', event: 'Access Granted', user: 'Jane Smith', door: 'Door 2 - Back Door', detail: 'PIN'},
+                {time: '14:15:03', type: 'danger', event: 'Access Denied', user: 'Unknown', door: 'Door 1 - Main Entrance', detail: 'Invalid Card'},
+                {time: '14:10:30', type: 'success', event: 'Exit', user: 'Mike Johnson', door: 'Door 1 - Main Entrance', detail: 'Card'},
+            ];
+
+            eventsContainer.innerHTML = sampleEvents.map(e => `
+                <div class="event-item">
+                    <div class="event-icon ${e.type}">
+                        ${e.type === 'success' ? '✓' : '✗'}
+                    </div>
+                    <div class="event-content">
+                        <div class="event-title">${e.event} - ${e.user}</div>
+                        <div class="event-details">${e.door} • ${e.detail}</div>
+                    </div>
+                    <div class="event-time">${e.time}</div>
+                </div>
+            `).join('');
+        }
+
+        function renderDoorStatus() {
+            const doorContainer = document.getElementById('door-status');
+            const doors = [
+                {num: 1, name: 'Main Entrance', locked: true},
+                {num: 2, name: 'Back Door', locked: false},
+                {num: 3, name: 'Server Room', locked: true},
+                {num: 4, name: 'Warehouse', locked: true},
+            ];
+
+            doorContainer.innerHTML = doors.map(d => `
+                <div class="door-card">
+                    <div class="door-header">
+                        <div class="door-name">Door ${d.num}: ${d.name}</div>
+                    </div>
+                    <div class="door-status">
+                        <div class="status-indicator ${d.locked ? 'locked' : 'unlocked'}"></div>
+                        <span>${d.locked ? '🔒 Locked' : '🔓 Unlocked'}</span>
+                    </div>
+                    <button class="btn ${d.locked ? 'btn-success' : 'btn-danger'}" style="width: 100%;">
+                        ${d.locked ? 'Unlock' : 'Lock'}
+                    </button>
+                </div>
+            `).join('');
+        }
+
+        // Initialize
+        renderRecentEvents();
+        renderDoorStatus();
+    </script>
+</body>
+</html>

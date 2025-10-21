@@ -158,7 +158,9 @@ class C3Client:
         try:
             _LOGGER.info("Unlocking door %s for %s seconds", door_number, duration)
             
-            data = struct.pack('BBBB', door_number, 1, duration, 0)
+            # Control output command format for C3
+            # Door number, output address (1=door lock), duration in seconds, reserved
+            data = struct.pack('<BBBB', door_number, 1, duration * 10, 0)
             
             response = self._send_command(CMD_CONTROL, data)
             
@@ -250,18 +252,26 @@ class C3Client:
         data_length = len(data)
         
         packet = bytearray()
-        packet.append(0xAA)
-        packet.append(0x00)
-        packet.extend(struct.pack('<H', command))
-        packet.extend(struct.pack('<H', data_length))
-        packet.extend(struct.pack('<H', 0))
+        packet.append(0xAA)  # Start byte
+        packet.append(0x01)  # Version (changed from 0x00 to 0x01)
+        packet.extend(struct.pack('<H', command))  # Command
+        packet.extend(struct.pack('<H', 0))  # Checksum placeholder
+        packet.extend(struct.pack('<H', 0))  # Session ID
+        packet.extend(struct.pack('<H', 0))  # Reply number
+        packet.extend(struct.pack('<H', data_length))  # Data length
         
         if data:
             packet.extend(data)
         
-        checksum = sum(packet[1:]) & 0xFFFF
-        packet.extend(struct.pack('<H', checksum))
+        # Calculate checksum
+        checksum = 0
+        for byte in packet:
+            checksum += byte
+        checksum = checksum & 0xFFFF
         
-        packet.append(0x55)
+        # Update checksum in packet (bytes 4-5)
+        struct.pack_into('<H', packet, 4, checksum)
+        
+        packet.append(0x55)  # End byte
         
         return bytes(packet)

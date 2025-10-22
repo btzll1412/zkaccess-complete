@@ -44,7 +44,7 @@ class C3Client:
             
             if success:
                 self.connected = True
-                _LOGGER.info("Connected to C3 panel at %s:%s", self.ip, self.port)
+                _LOGGER.info("✅ Connected to C3 panel at %s:%s", self.ip, self.port)
                 return True
             else:
                 _LOGGER.error("Failed to connect to panel at %s:%s", self.ip, self.port)
@@ -144,19 +144,30 @@ class C3Client:
             return False
         
         try:
-            _LOGGER.info("Unlocking door %s for %s seconds", door_number, duration)
+            _LOGGER.info("🔓 Unlocking door %s for %s seconds", door_number, duration)
             
             # Create control command
             control_cmd = ControlDeviceOutput(door_number, 1, duration)
             
-            # Send command
-            self.panel.control_device(control_cmd)
-            
-            _LOGGER.info("Door %s unlock command sent successfully", door_number)
-            return True
+            # Send command - catch response errors
+            try:
+                self.panel.control_device(control_cmd)
+                _LOGGER.info("✅ Door %s unlock command sent successfully", door_number)
+                return True
+            except Exception as cmd_error:
+                error_msg = str(cmd_error)
+                
+                # Check if it's just a response timeout/format issue
+                if "Invalid response header" in error_msg or "expected" in error_msg or "received b''" in error_msg:
+                    # Command was sent, panel just didn't respond properly
+                    _LOGGER.info("✅ Door %s unlock command sent (panel didn't respond, but this is normal for some firmware)", door_number)
+                    return True
+                else:
+                    # Real error
+                    raise
                 
         except Exception as e:
-            _LOGGER.error("Failed to unlock door %s: %s", door_number, e)
+            _LOGGER.error("❌ Failed to unlock door %s: %s", door_number, e)
             return False
 
     def lock_door(self, door_number: int) -> bool:

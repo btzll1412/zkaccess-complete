@@ -35,18 +35,15 @@ class ZKAccessCoordinator(DataUpdateCoordinator):
             password=entry.data.get(CONF_PASSWORD, ""),
         )
         
-        # Panel info
         self.panel_name = entry.data.get("panel_name", "Access Panel")
         self.serial_number = None
         self.door_count = 4
         self.model = "C3-400"
         self.connected = False
         
-        # Event buffer for live monitoring
         self.event_buffer = []
         self.max_events = 1000
         
-        # Update interval
         scan_interval = entry.options.get("scan_interval", 5)
 
         super().__init__(
@@ -65,7 +62,6 @@ class ZKAccessCoordinator(DataUpdateCoordinator):
             
             if connected:
                 self.connected = True
-                # Get panel information
                 info = await self.hass.async_add_executor_job(
                     self.client.get_device_info
                 )
@@ -103,23 +99,19 @@ class ZKAccessCoordinator(DataUpdateCoordinator):
             raise UpdateFailed(f"Not connected to panel {self.panel_name}")
         
         try:
-            # Get door status
             doors = await self.hass.async_add_executor_job(
                 self.client.get_door_status
             )
             
-            # Get events
             events = await self.hass.async_add_executor_job(
                 self.client.get_events
             )
             
-            # Add new events to buffer
             if events:
                 self.event_buffer.extend(events)
                 if len(self.event_buffer) > self.max_events:
                     self.event_buffer = self.event_buffer[-self.max_events:]
                 
-                # Send notifications for important events
                 await self._process_events(events)
             
             return {
@@ -140,8 +132,7 @@ class ZKAccessCoordinator(DataUpdateCoordinator):
         for event in events:
             event_type = event.get("event_type")
             
-            # Send notification for important events
-            if event_type in [205, 206, 2, 3]:  # Access denied, duress, alarms
+            if event_type in [205, 206, 2, 3]:
                 await self._send_notification(event)
 
     async def _send_notification(self, event: dict) -> None:
@@ -164,25 +155,25 @@ class ZKAccessCoordinator(DataUpdateCoordinator):
         )
 
     async def unlock_door(self, door_number: int, duration: int = 5) -> bool:
-    """Unlock a specific door."""
-    _LOGGER.error("🟢 Coordinator unlock_door called: door=%s, duration=%s", door_number, duration)
-    
-    if not self.connected:
-        _LOGGER.error("🟢 Coordinator: Not connected to panel")
-        return False
-    
-    try:
-        _LOGGER.error("🟢 Calling self.client.unlock_door...")
-        result = await self.hass.async_add_executor_job(
-            self.client.unlock_door, door_number, duration
-        )
-        _LOGGER.error("🟢 Client returned: %s", result)
+        """Unlock a specific door."""
+        _LOGGER.error("🟢 Coordinator unlock_door called: door=%s, duration=%s", door_number, duration)
         
-        await self.async_request_refresh()
-        return result
-    except Exception as err:
-        _LOGGER.error("🟢 Failed to unlock door %s: %s", door_number, err)
-        return False
+        if not self.connected:
+            _LOGGER.error("🟢 Coordinator: Not connected to panel")
+            return False
+        
+        try:
+            _LOGGER.error("🟢 Calling self.client.unlock_door...")
+            result = await self.hass.async_add_executor_job(
+                self.client.unlock_door, door_number, duration
+            )
+            _LOGGER.error("🟢 Client returned: %s", result)
+            
+            await self.async_request_refresh()
+            return result
+        except Exception as err:
+            _LOGGER.error("🟢 Failed to unlock door %s: %s", door_number, err)
+            return False
 
     async def lock_door(self, door_number: int) -> bool:
         """Lock a specific door."""

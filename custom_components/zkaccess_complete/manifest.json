@@ -4,7 +4,7 @@
   "codeowners": ["@btzll1412"],
   "config_flow": true,
   "documentation": "https://github.com/btzll1412/zkaccess-complete",
-  "requirements": [],
+  "requirements": ["zkaccess-c3==0.0.15"],
   "version": "1.0.0",
   "iot_class": "local_polling",
   "issue_tracker": "https://github.com/btzll1412/zkaccess-complete/issues"

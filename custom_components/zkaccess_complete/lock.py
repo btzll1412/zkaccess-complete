@@ -94,5 +94,10 @@ class ZKAccessDoorLock(CoordinatorEntity, LockEntity):
 
     async def async_unlock(self, **kwargs: Any) -> None:
         """Unlock the door."""
+        _LOGGER.error("🔵 Lock entity async_unlock called for door %s", self._door_number)
+    
         duration = self.coordinator.entry.options.get("unlock_duration", 5)
-        await self.coordinator.unlock_door(self._door_number, duration)
+        _LOGGER.error("🔵 Calling coordinator.unlock_door with duration=%s", duration)
+    
+        result = await self.coordinator.unlock_door(self._door_number, duration)
+        _LOGGER.error("🔵 Coordinator returned: %s", result)

@@ -164,20 +164,25 @@ class ZKAccessCoordinator(DataUpdateCoordinator):
         )
 
     async def unlock_door(self, door_number: int, duration: int = 5) -> bool:
-        """Unlock a specific door."""
-        if not self.connected:
-            _LOGGER.error("Cannot unlock door - not connected to panel")
-            return False
+    """Unlock a specific door."""
+    _LOGGER.error("🟢 Coordinator unlock_door called: door=%s, duration=%s", door_number, duration)
+    
+    if not self.connected:
+        _LOGGER.error("🟢 Coordinator: Not connected to panel")
+        return False
+    
+    try:
+        _LOGGER.error("🟢 Calling self.client.unlock_door...")
+        result = await self.hass.async_add_executor_job(
+            self.client.unlock_door, door_number, duration
+        )
+        _LOGGER.error("🟢 Client returned: %s", result)
         
-        try:
-            result = await self.hass.async_add_executor_job(
-                self.client.unlock_door, door_number, duration
-            )
-            await self.async_request_refresh()
-            return result
-        except Exception as err:
-            _LOGGER.error("Failed to unlock door %s: %s", door_number, err)
-            return False
+        await self.async_request_refresh()
+        return result
+    except Exception as err:
+        _LOGGER.error("🟢 Failed to unlock door %s: %s", door_number, err)
+        return False
 
     async def lock_door(self, door_number: int) -> bool:
         """Lock a specific door."""

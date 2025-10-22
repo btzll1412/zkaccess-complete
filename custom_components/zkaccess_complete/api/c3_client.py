@@ -1,5 +1,6 @@
 """ZKTeco C3 Access Control Panel Client - Using zkaccess-c3 library."""
 import logging
+import traceback
 from typing import Any
 
 try:
@@ -33,10 +34,8 @@ class C3Client:
             return False
         
         try:
-            # Create C3 panel instance
             self.panel = C3(self.ip, self.port)
             
-            # Connect (with or without password)
             if self.password:
                 success = self.panel.connect(self.password)
             else:
@@ -44,7 +43,7 @@ class C3Client:
             
             if success:
                 self.connected = True
-                _LOGGER.info("✅ Connected to C3 panel at %s:%s", self.ip, self.port)
+                _LOGGER.info("Connected to C3 panel at %s:%s", self.ip, self.port)
                 return True
             else:
                 _LOGGER.error("Failed to connect to panel at %s:%s", self.ip, self.port)
@@ -138,59 +137,46 @@ class C3Client:
             return []
 
     def unlock_door(self, door_number: int, duration: int = 5) -> bool:
-    """Unlock a door for specified duration."""
-    _LOGGER.error("🔴 unlock_door called: door=%s, duration=%s", door_number, duration)
-    
-    if not self.connected:
-        _LOGGER.error("🔴 Not connected!")
-        return False
+        """Unlock a door for specified duration."""
+        _LOGGER.error("🔴 unlock_door called: door=%s, duration=%s", door_number, duration)
         
-    if not self.panel:
-        _LOGGER.error("🔴 Panel object is None!")
-        return False
-        
-    if ControlDeviceOutput is None:
-        _LOGGER.error("🔴 ControlDeviceOutput is None!")
-        return False
-
-
-    try:
-        _LOGGER.error("🟡 Creating control command...")
-        control_cmd = ControlDeviceOutput(door_number, 1, duration)
-        _LOGGER.error("🟡 Control command created: %s", control_cmd)
-        
-        _LOGGER.error("🟡 Sending command to panel...")
-        try:
-            self.panel.control_device(control_cmd)
-            _LOGGER.error("✅ Command sent successfully!")
-            return True
-        except Exception as cmd_error:
-            error_msg = str(cmd_error)
-            _LOGGER.error("🔴 Command error: %s", error_msg)
+        if not self.connected:
+            _LOGGER.error("🔴 Not connected!")
+            return False
             
-            if "Invalid response header" in error_msg or "expected" in error_msg or "received b''" in error_msg:
-                _LOGGER.error("✅ Command sent (no response, but normal)")
+        if not self.panel:
+            _LOGGER.error("🔴 Panel object is None!")
+            return False
+            
+        if ControlDeviceOutput is None:
+            _LOGGER.error("🔴 ControlDeviceOutput is None!")
+            return False
+        
+        try:
+            _LOGGER.error("🟡 Creating control command...")
+            control_cmd = ControlDeviceOutput(door_number, 1, duration)
+            _LOGGER.error("🟡 Control command created: %s", control_cmd)
+            
+            _LOGGER.error("🟡 Sending command to panel...")
+            try:
+                self.panel.control_device(control_cmd)
+                _LOGGER.error("✅ Command sent successfully!")
                 return True
-            else:
-                raise
-
-    except Exception as e:
-        _LOGGER.error("❌ Exception in unlock_door: %s", e)
-        import traceback
-        _LOGGER.error("Traceback: %s", traceback.format_exc())
-        return False
+            except Exception as cmd_error:
+                error_msg = str(cmd_error)
+                _LOGGER.error("🔴 Command error: %s", error_msg)
+                
+                if "Invalid response header" in error_msg or "expected" in error_msg or "received b''" in error_msg:
+                    _LOGGER.error("✅ Command sent (no response, but normal)")
+                    return True
+                else:
+                    raise
+        
+        except Exception as e:
+            _LOGGER.error("❌ Exception in unlock_door: %s", e)
+            _LOGGER.error("Traceback: %s", traceback.format_exc())
+            return False
 
     def lock_door(self, door_number: int) -> bool:
         """Lock a door immediately."""
         return self.unlock_door(door_number, 0)
-
-
-async def async_unlock(self, **kwargs: Any) -> None:
-    """Unlock the door."""
-    _LOGGER.error("🔵 Lock entity async_unlock called for door %s", self._door_number)
-    
-    duration = self.coordinator.entry.options.get("unlock_duration", 5)
-    _LOGGER.error("🔵 Calling coordinator.unlock_door with duration=%s", duration)
-    
-    result = await self.coordinator.unlock_door(self._door_number, duration)
-    _LOGGER.error("🔵 Coordinator returned: %s", result)

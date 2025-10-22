@@ -1,20 +1,15 @@
-"""ZKTeco C3 Access Control Panel Client - Simplified Protocol."""
+"""ZKTeco C3 Access Control Panel Client - Using zkaccess-c3 library."""
 import logging
-import socket
-import struct
 from typing import Any
 
+try:
+    from c3 import C3
+    from c3.controldevice import ControlDeviceOutput
+except ImportError:
+    C3 = None
+    ControlDeviceOutput = None
+
 _LOGGER = logging.getLogger(__name__)
-
-# Protocol Commands
-CMD_CONTROL = 0x05
-CMD_GET_PARAM = 0x04
-CMD_GET_RT_LOG = 0x0B
-
-# Packet bytes
-PACKET_START = 0xAA
-PACKET_VERSION = 0x01
-PACKET_END = 0x55
 
 
 class C3Client:
@@ -24,36 +19,46 @@ class C3Client:
         """Initialize the client."""
         self.ip = ip
         self.port = port
-        self.password = password
-        self.socket = None
+        self.password = password if password else None
+        self.panel = None
         self.connected = False
+        
+        if C3 is None:
+            _LOGGER.error("zkaccess-c3 library not installed")
 
     def connect(self) -> bool:
-        """Connect to the panel (simple TCP connection)."""
+        """Connect to the panel."""
+        if C3 is None:
+            _LOGGER.error("zkaccess-c3 library not available")
+            return False
+        
         try:
-            # Create TCP socket
-            self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-            self.socket.settimeout(5)
-            self.socket.connect((self.ip, self.port))
+            # Create C3 panel instance
+            self.panel = C3(self.ip, self.port)
             
-            self.connected = True
-            _LOGGER.info("Connected to C3 panel at %s:%s", self.ip, self.port)
-            return True
+            # Connect (with or without password)
+            if self.password:
+                success = self.panel.connect(self.password)
+            else:
+                success = self.panel.connect()
+            
+            if success:
+                self.connected = True
+                _LOGGER.info("Connected to C3 panel at %s:%s", self.ip, self.port)
+                return True
+            else:
+                _LOGGER.error("Failed to connect to panel at %s:%s", self.ip, self.port)
+                return False
                 
         except Exception as e:
             _LOGGER.error("Connection error to %s:%s - %s", self.ip, self.port, e)
-            if self.socket:
-                try:
-                    self.socket.close()
-                except:
-                    pass
             return False
 
     def disconnect(self) -> None:
         """Disconnect from the panel."""
-        if self.socket:
+        if self.panel:
             try:
-                self.socket.close()
+                self.panel.disconnect()
                 self.connected = False
                 _LOGGER.info("Disconnected from panel %s", self.ip)
             except Exception as e:
@@ -61,16 +66,42 @@ class C3Client:
 
     def get_device_info(self) -> dict[str, Any]:
         """Get device information."""
-        return {
-            "serial_number": "Unknown",
-            "door_count": 4,
-            "model": "C3-400",
-            "firmware": "Unknown",
-        }
+        if not self.connected or not self.panel:
+            return {
+                "serial_number": "Unknown",
+                "door_count": 4,
+                "model": "C3-400",
+                "firmware": "Unknown",
+            }
+        
+        try:
+            params = self.panel.get_device_param(["~SerialNumber", "LockCount", "FirmVer"])
+            
+            return {
+                "serial_number": params.get("~SerialNumber", "Unknown"),
+                "door_count": int(params.get("LockCount", "4")),
+                "firmware": params.get("FirmVer", "Unknown"),
+                "model": "C3-400",
+            }
+        except Exception as e:
+            _LOGGER.warning("Could not get device info: %s", e)
+            return {
+                "serial_number": "Unknown",
+                "door_count": 4,
+                "model": "C3-400",
+                "firmware": "Unknown",
+            }
 
     def get_parameters(self, params: list[str]) -> dict[str, str]:
         """Get device parameters."""
-        return {}
+        if not self.connected or not self.panel:
+            return {}
+        
+        try:
+            return self.panel.get_device_param(params)
+        except Exception as e:
+            _LOGGER.error("Error getting parameters: %s", e)
+            return {}
 
     def get_door_status(self) -> list[dict[str, Any]]:
         """Get status of all doors."""
@@ -86,56 +117,42 @@ class C3Client:
 
     def get_events(self) -> list[dict[str, Any]]:
         """Get real-time events from the panel."""
-        return []
+        if not self.connected or not self.panel:
+            return []
+        
+        try:
+            rt_log = self.panel.get_rt_log()
+            
+            events = []
+            for record in rt_log:
+                events.append({
+                    "time": getattr(record, 'time', None),
+                    "pin": getattr(record, 'pin', None),
+                    "door": getattr(record, 'door', None),
+                    "event_type": getattr(record, 'event_type', None),
+                })
+            
+            return events
+        except Exception as e:
+            _LOGGER.debug("No new events: %s", e)
+            return []
 
     def unlock_door(self, door_number: int, duration: int = 5) -> bool:
         """Unlock a door for specified duration."""
-        if not self.connected:
-            _LOGGER.error("Cannot unlock door - not connected")
+        if not self.connected or not self.panel or ControlDeviceOutput is None:
+            _LOGGER.error("Cannot unlock door - not connected or library not available")
             return False
         
         try:
-            _LOGGER.info("Sending unlock command: door %s for %s seconds", door_number, duration)
+            _LOGGER.info("Unlocking door %s for %s seconds", door_number, duration)
             
-            # Try multiple command formats
-            formats = [
-                # Format 1: Standard format
-                struct.pack('<BBBB', door_number, 1, duration, 0),
-                # Format 2: Extended format
-                struct.pack('<BBBBBB', door_number, 1, duration, 0, 0, 0),
-                # Format 3: Simple format
-                struct.pack('<BBB', door_number, duration, 0),
-            ]
+            # Create control command
+            control_cmd = ControlDeviceOutput(door_number, 1, duration)
             
-            for idx, data in enumerate(formats):
-                _LOGGER.debug("Trying format %d: %s", idx + 1, data.hex())
-                
-                packet = self._build_simple_packet(CMD_CONTROL, data)
-                
-                try:
-                    self.socket.sendall(packet)
-                    _LOGGER.debug("Sent %d bytes", len(packet))
-                    
-                    # Try to receive response (but don't require it)
-                    self.socket.settimeout(2)
-                    try:
-                        response = self.socket.recv(1024)
-                        if response:
-                            _LOGGER.info("Got response: %s", response.hex()[:40])
-                            return True
-                    except socket.timeout:
-                        _LOGGER.debug("No response (might be normal)")
-                        # Consider success if no error
-                        return True
-                    
-                    self.socket.settimeout(5)
-                    
-                except Exception as e:
-                    _LOGGER.debug("Format %d failed: %s", idx + 1, e)
-                    continue
+            # Send command
+            self.panel.control_device(control_cmd)
             
-            # If we get here, all formats failed but connection is still alive
-            _LOGGER.warning("All formats tried, considering command sent")
+            _LOGGER.info("Door %s unlock command sent successfully", door_number)
             return True
                 
         except Exception as e:
@@ -145,27 +162,3 @@ class C3Client:
     def lock_door(self, door_number: int) -> bool:
         """Lock a door immediately."""
         return self.unlock_door(door_number, 0)
-
-    def _build_simple_packet(self, command: int, data: bytes = b'') -> bytes:
-        """Build simple protocol packet without session management."""
-        data_length = len(data)
-        
-        # Build packet
-        packet = bytearray()
-        packet.append(PACKET_START)  # 0xAA
-        packet.append(PACKET_VERSION)  # 0x01
-        packet.append(command)  # Command byte
-        packet.extend(struct.pack('<H', data_length))  # Length (2 bytes, little-endian)
-        
-        # Add data
-        if data:
-            packet.extend(data)
-        
-        # Simple checksum (sum of all bytes)
-        checksum = sum(packet[1:]) & 0xFFFF
-        packet.extend(struct.pack('<H', checksum))
-        
-        # End byte
-        packet.append(PACKET_END)  # 0x55
-        
-        return bytes(packet)

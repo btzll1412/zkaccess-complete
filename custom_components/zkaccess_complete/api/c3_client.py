@@ -136,56 +136,47 @@ class C3Client:
             _LOGGER.debug("No new events: %s", e)
             return []
 
-    def unlock_door(self, door_number: int, duration: int = 5) -> bool:
-        """Unlock a door for specified duration."""
-        _LOGGER.error("🔴 unlock_door called: door=%s, duration=%s", door_number, duration)
+def unlock_door(self, door_number: int, duration: int = 5) -> bool:
+    """Unlock a door for specified duration."""
+    if not self.connected:
+        _LOGGER.error("Cannot unlock door - not connected")
+        return False
         
-        if not self.connected:
-            _LOGGER.error("🔴 Not connected!")
-            return False
-            
-        if not self.panel:
-            _LOGGER.error("🔴 Panel object is None!")
-            return False
-            
-        if ControlDeviceOutput is None:
-            _LOGGER.error("🔴 ControlDeviceOutput is None!")
-            return False
+    if not self.panel:
+        _LOGGER.error("Panel object is None")
+        return False
+        
+    if ControlDeviceOutput is None:
+        _LOGGER.error("ControlDeviceOutput library not available")
+        return False
+    
+    try:
+        _LOGGER.info("Unlocking door %s for %s seconds", door_number, duration)
+        control_cmd = ControlDeviceOutput(door_number, 1, duration)
         
         try:
-            _LOGGER.error("🟡 Creating control command...")
-            control_cmd = ControlDeviceOutput(door_number, 1, duration)
-            _LOGGER.error("🟡 Control command created: %s", control_cmd)
+            self.panel.control_device(control_cmd)
+            _LOGGER.info("Door %s unlocked successfully", door_number)
+            return True
+        except Exception as cmd_error:
+            error_msg = str(cmd_error)
             
-            _LOGGER.error("🟡 Sending command to panel...")
-            try:
-                self.panel.control_device(control_cmd)
-                _LOGGER.error("✅ Command sent successfully!")
+            # Panel response errors are normal - command was still sent
+            response_errors = [
+                "Invalid response header",
+                "expected",
+                "received b''",
+                "does not start with start token",
+                "Received reply does not start",
+                "ValueError",
+            ]
+            
+            if any(err in error_msg for err in response_errors):
+                _LOGGER.debug("Panel response error (command sent successfully): %s", error_msg)
                 return True
-            except Exception as cmd_error:
-                error_msg = str(cmd_error)
-                _LOGGER.error("🔴 Command error: %s", error_msg)
-                
-                response_errors = [
-                    "Invalid response header",
-                    "expected",
-                    "received b''",
-                    "does not start with start token",
-                    "Received reply does not start",
-                    "ValueError",
-                ]
-                
-                if any(err in error_msg for err in response_errors):
-                    _LOGGER.error("✅ Command sent (panel response error, but command was sent)")
-                    return True
-                else:
-                    raise
-        
-        except Exception as e:
-            _LOGGER.error("❌ Exception in unlock_door: %s", e)
-            _LOGGER.error("Traceback: %s", traceback.format_exc())
-            return False
-
-    def lock_door(self, door_number: int) -> bool:
-        """Lock a door immediately."""
-        return self.unlock_door(door_number, 0)
+            else:
+                raise
+    
+    except Exception as e:
+        _LOGGER.error("Failed to unlock door %s: %s", door_number, e)
+        return False

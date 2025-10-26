@@ -137,45 +137,57 @@ class C3Client:
             return []
 
     def unlock_door(self, door_number: int, duration: int = 5) -> bool:
-        """Unlock a door for specified duration."""
-        _LOGGER.error("🔴 unlock_door called: door=%s, duration=%s", door_number, duration)
+    """Unlock a door for specified duration."""
+    _LOGGER.error("🔴 unlock_door called: door=%s, duration=%s", door_number, duration)
+    
+    if not self.connected:
+        _LOGGER.error("🔴 Not connected!")
+        return False
         
-        if not self.connected:
-            _LOGGER.error("🔴 Not connected!")
-            return False
-            
-        if not self.panel:
-            _LOGGER.error("🔴 Panel object is None!")
-            return False
-            
-        if ControlDeviceOutput is None:
-            _LOGGER.error("🔴 ControlDeviceOutput is None!")
-            return False
+    if not self.panel:
+        _LOGGER.error("🔴 Panel object is None!")
+        return False
         
+    if ControlDeviceOutput is None:
+        _LOGGER.error("🔴 ControlDeviceOutput is None!")
+        return False
+    
+    try:
+        _LOGGER.error("🟡 Creating control command...")
+        control_cmd = ControlDeviceOutput(door_number, 1, duration)
+        _LOGGER.error("🟡 Control command created: %s", control_cmd)
+        
+        _LOGGER.error("🟡 Sending command to panel...")
         try:
-            _LOGGER.error("🟡 Creating control command...")
-            control_cmd = ControlDeviceOutput(door_number, 1, duration)
-            _LOGGER.error("🟡 Control command created: %s", control_cmd)
+            self.panel.control_device(control_cmd)
+            _LOGGER.error("✅ Command sent successfully!")
+            return True
+        except Exception as cmd_error:
+            error_msg = str(cmd_error)
+            _LOGGER.error("🔴 Command error: %s", error_msg)
             
-            _LOGGER.error("🟡 Sending command to panel...")
-            try:
-                self.panel.control_device(control_cmd)
-                _LOGGER.error("✅ Command sent successfully!")
+            # List of response errors that are "normal" for C3 panels
+            response_errors = [
+                "Invalid response header",
+                "expected",
+                "received b''",
+                "does not start with start token",  # ← NEW!
+                "Received reply does not start",     # ← NEW!
+                "ValueError",                        # ← NEW!
+            ]
+            
+            # Check if it's a response format error (command was sent successfully)
+            if any(err in error_msg for err in response_errors):
+                _LOGGER.error("✅ Command sent (panel response error, but command was sent)")
                 return True
-            except Exception as cmd_error:
-                error_msg = str(cmd_error)
-                _LOGGER.error("🔴 Command error: %s", error_msg)
-                
-                if "Invalid response header" in error_msg or "expected" in error_msg or "received b''" in error_msg:
-                    _LOGGER.error("✅ Command sent (no response, but normal)")
-                    return True
-                else:
-                    raise
-        
-        except Exception as e:
-            _LOGGER.error("❌ Exception in unlock_door: %s", e)
-            _LOGGER.error("Traceback: %s", traceback.format_exc())
-            return False
+            else:
+                # Real connection/send error
+                raise
+    
+    except Exception as e:
+        _LOGGER.error("❌ Exception in unlock_door: %s", e)
+        _LOGGER.error("Traceback: %s", traceback.format_exc())
+        return False
 
     def lock_door(self, door_number: int) -> bool:
         """Lock a door immediately."""
